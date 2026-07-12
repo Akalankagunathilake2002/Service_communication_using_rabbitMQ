@@ -18,12 +18,14 @@ const QUEUE_COLOR: Record<string, string> = {
   "inventory_service.order_created": "var(--series-1)",
   "notification_service.order_events": "var(--series-2)",
   "dashboard_service.all_events": "var(--series-3)",
+  "fraud_service.order_created": "var(--series-4)",
 };
 
 const QUEUE_LABEL: Record<string, string> = {
   "inventory_service.order_created": "inventory-service",
   "notification_service.order_events": "notification-service",
   "dashboard_service.all_events": "dashboard-service",
+  "fraud_service.order_created": "fraud-service",
 };
 
 function ChartTooltip({ active, payload }: { active?: boolean; payload?: { payload: { name: string; value: number } }[] }) {

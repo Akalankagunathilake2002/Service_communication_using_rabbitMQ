@@ -13,6 +13,8 @@ export interface Order {
   total: number | null;
   status: OrderStatus;
   reason: string | null;
+  risk_score: number | null;
+  fraud_flag: boolean | null;
   created_at: string;
   updated_at: string;
   history: { routing_key: string; at: string }[];

@@ -6,6 +6,7 @@ const LABEL: Record<string, string> = {
   "order.created": "order created",
   "order.inventory_reserved": "inventory reserved",
   "order.inventory_failed": "inventory failed",
+  "order.fraud_checked": "fraud check",
 };
 
 const DOT_COLOR: Record<string, string> = {
@@ -16,6 +17,23 @@ const DOT_COLOR: Record<string, string> = {
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, { hour12: false });
+}
+
+// Fraud-check color depends on the scored risk, not just the routing key, so it can't
+// live in the static DOT_COLOR map like the other event types.
+function dotColorFor(event: DashboardEvent): string {
+  if (event.routing_key === "order.fraud_checked") {
+    return event.order.fraud_flag ? "var(--status-critical)" : "var(--status-good)";
+  }
+  return DOT_COLOR[event.routing_key] ?? "var(--text-muted)";
+}
+
+function describeEvent(event: DashboardEvent): string {
+  if (event.routing_key === "order.fraud_checked" && event.order.risk_score !== null) {
+    const risk = event.order.risk_score.toFixed(2);
+    return event.order.fraud_flag ? `fraud check — risk ${risk} ⚠` : `fraud check — risk ${risk}`;
+  }
+  return LABEL[event.routing_key] ?? event.routing_key;
 }
 
 export default function LiveFeed({ events, connected }: { events: DashboardEvent[]; connected: boolean }) {
@@ -47,13 +65,11 @@ export default function LiveFeed({ events, connected }: { events: DashboardEvent
           <li key={`${event.order.order_id}-${event.routing_key}-${i}`} className="flex items-start gap-2 text-xs">
             <span
               className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full"
-              style={{ background: DOT_COLOR[event.routing_key] ?? "var(--text-muted)" }}
+              style={{ background: dotColorFor(event) }}
             />
             <span style={{ color: "var(--text-secondary)" }}>
               <span style={{ color: "var(--text-muted)" }}>{timeOnly(event.received_at)}</span>{" "}
-              <strong style={{ color: "var(--text-primary)" }}>
-                {LABEL[event.routing_key] ?? event.routing_key}
-              </strong>{" "}
+              <strong style={{ color: "var(--text-primary)" }}>{describeEvent(event)}</strong>{" "}
               — order {event.order.order_id.slice(0, 8)}… ({event.order.customer ?? "unknown"})
             </span>
           </li>

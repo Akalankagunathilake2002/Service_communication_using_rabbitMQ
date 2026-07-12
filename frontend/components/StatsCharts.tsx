@@ -20,6 +20,22 @@ const STATUS_META: Record<OrderStatus, { label: string; color: string }> = {
   unknown: { label: "Unknown", color: "var(--text-muted)" },
 };
 
+type RiskBucket = "low" | "medium" | "high";
+
+// Risk is a severity/ordinal dimension (not an unordered category), so it borrows the
+// good/warning/critical status colors rather than the categorical --series-N palette.
+const RISK_META: Record<RiskBucket, { label: string; color: string }> = {
+  low: { label: "Low", color: "var(--status-good)" },
+  medium: { label: "Medium", color: "var(--status-warning)" },
+  high: { label: "High", color: "var(--status-critical)" },
+};
+
+function bucketRisk(riskScore: number): RiskBucket {
+  if (riskScore >= 0.6) return "high";
+  if (riskScore >= 0.3) return "medium";
+  return "low";
+}
+
 function ChartTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number }[] }) {
   if (!active || !payload?.length) return null;
   return (
@@ -61,6 +77,21 @@ export default function StatsCharts({ orders }: { orders: Order[] }) {
     () => orders.filter((o) => o.status === "reserved").reduce((sum, o) => sum + (o.total ?? 0), 0),
     [orders],
   );
+
+  const riskData = useMemo(() => {
+    const counts: Record<RiskBucket, number> = { low: 0, medium: 0, high: 0 };
+    for (const order of orders) {
+      if (order.risk_score === null) continue;
+      counts[bucketRisk(order.risk_score)] += 1;
+    }
+    return (["low", "medium", "high"] as RiskBucket[]).map((bucket) => ({
+      bucket,
+      name: RISK_META[bucket].label,
+      value: counts[bucket],
+    }));
+  }, [orders]);
+
+  const pendingRiskCount = useMemo(() => orders.filter((o) => o.risk_score === null).length, [orders]);
 
   return (
     <div
@@ -113,6 +144,49 @@ export default function StatsCharts({ orders }: { orders: Order[] }) {
             {STATUS_META[status].label}
           </span>
         ))}
+      </div>
+
+      <p className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+        Fraud risk (fraud-service)
+      </p>
+      <div className="mb-2 h-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={riskData} barCategoryGap="20%">
+            <CartesianGrid vertical={false} stroke="var(--gridline)" />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+              axisLine={{ stroke: "var(--baseline)" }}
+              tickLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fill: "var(--text-muted)", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={24}
+            />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--gridline)" }} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
+              {riskData.map((entry) => (
+                <Cell key={entry.bucket} fill={RISK_META[entry.bucket].color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        {(["low", "medium", "high"] as RiskBucket[]).map((bucket) => (
+          <span key={bucket} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: RISK_META[bucket].color }} />
+            {RISK_META[bucket].label}
+          </span>
+        ))}
+        {pendingRiskCount > 0 && (
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {pendingRiskCount} pending fraud check…
+          </span>
+        )}
       </div>
 
       <p className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
