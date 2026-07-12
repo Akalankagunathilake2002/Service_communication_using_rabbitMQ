@@ -36,6 +36,14 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  fraud-service:
+    build: ./fraud-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   dashboard-service:
     build: ./dashboard-service
     ports:

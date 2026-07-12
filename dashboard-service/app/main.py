@@ -23,6 +23,7 @@ KNOWN_QUEUES = [
     "inventory_service.order_created",
     "notification_service.order_events",
     "dashboard_service.all_events",
+    "fraud_service.order_created",
 ]
 
 state: dict = {}

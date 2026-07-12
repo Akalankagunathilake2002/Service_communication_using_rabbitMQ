@@ -12,6 +12,8 @@ MESSAGES = {
     "order.created": lambda e: f"Order {e['order_id']} received from {e['customer']} (total ${e['total']:.2f})",
     "order.inventory_reserved": lambda e: f"Order {e['order_id']}: stock reserved, preparing shipment",
     "order.inventory_failed": lambda e: f"Order {e['order_id']}: out of stock, notifying customer of delay",
+    "order.fraud_checked": lambda e: f"Order {e['order_id']}: fraud check — risk {e['risk_score']:.2f}"
+    + (" ⚠ HIGH RISK" if e.get("flag") else ""),
 }
 
 
